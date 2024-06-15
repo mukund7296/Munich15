@@ -1,0 +1,32 @@
+name: Auto Add Issues to Project
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add_issue_to_project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add issue to project
+        uses: actions/github-script@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const project_id = 'YOUR_PROJECT_ID';  // Replace with your project ID
+            const issue_id = context.payload.issue.node_id;
+            const query = `
+              mutation($projectId: ID!, $issueId: ID!) {
+                addProjectV2ItemById(input: {projectId: $projectId, contentId: $issueId}) {
+                  item {
+                    id
+                  }
+                }
+              }
+            `;
+            const variables = {
+              projectId: project_id,
+              issueId: issue_id,
+            };
+            const result = await github.graphql(query, variables);
+            console.log(`Issue added to project: ${result.addProjectV2ItemById.item.id}`);
