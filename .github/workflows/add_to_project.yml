@@ -1,0 +1,75 @@
+name: Add issues to GitHub Project
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add_to_project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Add issue to project
+        env:
+          GITHUB_TOKEN: ${{ secrets."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" }}  # GitHub token provided by Actions
+          PROJECT_ID: 12            # Replace with your actual project ID
+        run: |
+          import os
+          import requests
+
+          # GitHub API URL and GraphQL endpoint
+          github_api_url = 'https://api.github.com/graphql'
+
+          # GraphQL mutation to add issue to project
+          mutation_query = '''
+            mutation($project: ID!, $issue: ID!) {
+              addProjectNextItem(input: {projectId: $project, contentId: $issue}) {
+                projectNextItem {
+                  id
+                }
+              }
+            }
+          '''
+
+          # Get issue ID from GitHub event payload
+          issue_id = '${{ github.event.issue.node_id }}'
+
+          # Construct GraphQL mutation payload
+          payload = {
+              'query': mutation_query,
+              'variables': {
+                  'project': os.getenv('PROJECT_ID'),
+                  'issue': issue_id
+              }
+          }
+
+          # Headers with Authorization
+          headers = {
+              'Authorization': f'token {os.getenv("GITHUB_TOKEN")}',
+              'Content-Type': 'application/json'
+          }
+
+          # Make the GraphQL API request
+          try:
+              response = requests.post(github_api_url, json=payload, headers=headers)
+              response.raise_for_status()
+              data = response.json()
+              item_id = data.get('data', {}).get('addProjectNextItem', {}).get('projectNextItem', {}).get('id')
+              if item_id:
+                  print(f'Issue successfully added to project. Item ID: {item_id}')
+              else:
+                  print('Failed to add issue to project.')
+          except requests.exceptions.RequestException as e:
+              print(f'Error adding issue to project: {e}')
