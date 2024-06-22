@@ -1,0 +1,28 @@
+name: Add Issues to Project
+
+on:
+  issues:
+    types: [opened]  # Trigger the workflow when a new issue is opened
+jobs:
+  add_issue_to_project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Fetch issue details
+        id: fetch_issue
+        run: |
+          echo "Fetching issue details..."
+          ISSUE_NUMBER=$(jq --raw-output .issue.number $GITHUB_EVENT_PATH)
+          echo "::set-output name=issue_number::$ISSUE_NUMBER"
+
+      - name: Add issue to project column
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_OWNER: mukund7296  # Replace with your GitHub username
+          REPO_NAME: Munich15  # Replace with your repository name
+          PROJECT_ID: 12  # Replace with your project ID
+          COLUMN_NAME: NewIssues  # Replace with your desired column name
+        run: |
+          python add_issue_to_project.py $REPO_OWNER $REPO_NAME $PROJECT_ID $COLUMN_NAME $ISSUE_NUMBER
